@@ -42,18 +42,18 @@ I defined the following configuration for the AutoML run:
 
 ```
 automl_config = AutoMLConfig(
-    compute_target = compute_target,
-    experiment_timeout_minutes=15,
-    task='classification',
-    primary_metric='accuracy',
-    training_data=ds,
-    label_column_name='y',
-    enable_onnx_compatible_models=True,
-    n_cross_validations=2)
+    experiment_timeout_minutes = 30,
+    task = 'classification',
+    primary_metric = 'accuracy',
+    training_data = ds,
+    label_column_name = 'y',
+    n_cross_validations = 7,
+    compute_target = compute_cluster,
+    iterations = 5)
 ```
-_experiment_timeout_minutes=15_
+_experiment_timeout_minutes=30_
 
-This is an exit criterion and is used to define how long, in minutes, the experiment should continue to run. To help avoid experiment time out failures, I used the minimum of 15 minutes.
+This is an exit criterion and is used to define how long, in minutes, the experiment should continue to run. To help avoid experiment time out failures, I used the minimum of 30 minutes.
 
 _task='classification'_
 
@@ -66,19 +66,15 @@ _primary_metric='accuracy'_
 
 
 | HyperDrive Model | |
-| :---: | :---: |
-| id | HD_fda34223-a94c-456b-8bf7-52e84aa1d17e_14  |
-| Accuracy | 0.9146024279210926 |
+Best Run Id:  HD_da1813a9-c46b-4696-8976-b9755a019132_7
+Accuracy: 0.9074
 
 
 | AutoML Model | |
-| :---: | :---: |
-| id | AutoML_ee4a685e-34f2-4031-a4f9-fe96ff33836c_13 |
-| Accuracy | 0.918176024279211 |
-| AUC_weighted | 0.9189939634729121 |
-| Algortithm | VotingEnsemble |
+| id | AutoML_7e62a313-77dd-4e54-be40-a453d45c60ce |
+| Accuracy | 0.9163 |
 
-The two models performed very similarly in terms of accuracy, with the hyperdive model achieving 91.4% accuracy and the autoML model achieving 91.8% accuracy. The difference in accuracy could come down to slight variations in the cross-validation process. The pipelines make use of the same data cleansing process, however autoML tests a number of scalers in combination with models, adding a preprocessing step prior to model training. Architecturally, the models are quite different. Logistic regression (91.4% accurate; tuned with hyperdrive) effectively makes use of a fitted logistic function with a threshold to carry out binary classification. The voting ensemble classifier (91.8% accurate; selected via autoML) makes use of a number of individual classifiers and, in this case, averages the class probabilities of each classifier to make a prediction. 
+The two models performed very similarly in terms of accuracy, with the hyperdive model achieving 90.7% accuracy and the autoML model achieving 91.6% accuracy. The difference in accuracy could come down to slight variations in the cross-validation process. The pipelines make use of the same data cleansing process, however autoML tests a number of scalers in combination with models, adding a preprocessing step prior to model training. Architecturally, the models are quite different. Logistic regression (90.7% accurate; tuned with hyperdrive) effectively makes use of a fitted logistic function with a threshold to carry out binary classification. The voting ensemble classifier (91.6% accurate; selected via autoML) makes use of a number of individual classifiers and, in this case, averages the class probabilities of each classifier to make a prediction. 
 
 
 The autoML pipeline is very similar to the Scikit-learn pipeline described above with several notable differences:
@@ -88,9 +84,7 @@ The autoML pipeline is very similar to the Scikit-learn pipeline described above
 - The variables and target dataframes are merged prior to the autoML process.
 - The joined dataset is used as input in the autoML configuration and the autoML run is processed locally.
 
-The best model selected by autoML was a voting ensemble (~91.8% accurate). The Voting Ensemble model selected used a slight amount of l1 regularization, meaning that some penalty was placed the number of non-zero model coefficients. Additionally, the voting method was soft voting (as compared to hard), where all models' class probabilities are averaged and the highest probablility selected to make a prediction. Although the learning rate scheduling for gradient descent is specified as 'invscaling' (i.e. inverse scaling), the scaling factor power is 0 indicating that the learning rate is constant in this case.
-
-The difference in accuracy between the two models is rather trivial and  I am of the opinion that the AutoML model is actually better because of its **AUC_weighted** metric which equals to **0.9189939634729121** and is more fit for the highly imbalanced data that we have here. If we were given more time to run the AutoML, the resulting model would certainly be much more better. And the best thing is that AutoML would make all the necessary calculations, trainings, validations, etc. without the need for us to do anything. This is the difference with the Scikit-learn Logistic Regression pipeline, in which we have to make any adjustments, changes, etc. by ourselves and come to a final model after many trials & errors. 
+The best model selected by autoML was a voting ensemble (~91.6% accurate). The Voting Ensemble model selected used a slight amount of l1 regularization, meaning that some penalty was placed the number of non-zero model coefficients. Additionally, the voting method was soft voting (as compared to hard), where all models' class probabilities are averaged and the highest probablility selected to make a prediction. Although the learning rate scheduling for gradient descent is specified as 'invscaling' (i.e. inverse scaling), the scaling factor power is 0 indicating that the learning rate is constant in this case.
 
 ## Future work
 In the future it might be helpful to explore more feature engineering steps prior to training. Also, many of the AutoML runs use a scaler prior to model training and evaluation. The encoded data does not really benefit from this scaling, so selectively scaling continuous variables instead of all, might be helpful. Also, running AutoML for much longer would likely find better models in this case. Furthermore, exploring hyperdrive with a broader variety of classification models would also be informative.
