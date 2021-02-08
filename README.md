@@ -35,8 +35,6 @@ I selected the BanditPolicy stopping policy because it allows one to select a cu
 
 BanditPolicy defines an early termination policy based on slack criteria, and a frequency and delay interval for evaluation. Slack factor - The amount of slack allowed with respect to the best performing training run. This factor specifies the slack as a ratio. Slack Amount - The amount of slack allowed with respect to the best performing training run. This factor specifies the slack as an absolute amount.
 
-The best model parameters here were a C value of 7.22 and a max_iter value of 97. The model's accuracy was ~91.4%.
-
 ## AutoML
 I defined the following configuration for the AutoML run:
 
