@@ -26,14 +26,61 @@ The classification method used here is logistic regression. Logistic regression 
 Azure's Hyperdrive service was used for hyperparameter tuning with the following key elements:
 
 #### Parameter sampling
-I decided to use random parameter sampling. Compared to the other techniques available, random sampling does not require pre-specified values (like grid search) and can make full use of all available nodes (unlike bayesian parameter sampling). Random parameter searching is preferable to gridsearch also in that it is highly unlikely that the specified values in gridsearch are optimal, while there is a chance that the ones obtained randomly are closer to ideal values. Combined with the fact that I have very little background in using logistic regression random parameter sampling enables a much more broad search over the parameter space and with it's capabilities to make use of concurrency would outperform bayesian sampling for large jobs.
+I decided to use random parameter sampling. Compared to the other techniques available, random sampling does not require pre-specified values (like grid search) and can make full use of all available nodes (unlike bayesian parameter sampling). 
+
+Random Parameter sampling supports early termination of low-performance runs. Benefit- A simple random sample allows to learn about an entire population much faster and more efficiently than collecting data from every member of the population. Some users do an initial search with random sampling and then refine the search space to improve results. Random parameter searching is preferable to gridsearch also in that it is highly unlikely that the specified values in gridsearch are optimal, while there is a chance that the ones obtained randomly are closer to ideal values. Combined with the fact that I have very little background in using logistic regression random parameter sampling enables a much more broad search over the parameter space and with it's capabilities to make use of concurrency would outperform bayesian sampling for large jobs.
 
 #### Early stopping policy
 I selected the BanditPolicy stopping policy because it allows one to select a cut-off at which models reporting metrics worse than the current best model are terminated. This allows a relatively intuitive method to screen models, only retaining those with similar or better performance. This policy offers a little more flexibility than truncation and median stopping.
 
+BanditPolicy defines an early termination policy based on slack criteria, and a frequency and delay interval for evaluation. Slack factor - The amount of slack allowed with respect to the best performing training run. This factor specifies the slack as a ratio. Slack Amount - The amount of slack allowed with respect to the best performing training run. This factor specifies the slack as an absolute amount.
+
 The best model parameters here were a C value of 7.22 and a max_iter value of 97. The model's accuracy was ~91.4%.
 
 ## AutoML
+I defined the following configuration for the AutoML run:
+
+```
+automl_config = AutoMLConfig(
+    compute_target = compute_target,
+    experiment_timeout_minutes=15,
+    task='classification',
+    primary_metric='accuracy',
+    training_data=ds,
+    label_column_name='y',
+    enable_onnx_compatible_models=True,
+    n_cross_validations=2)
+```
+_experiment_timeout_minutes=15_
+
+This is an exit criterion and is used to define how long, in minutes, the experiment should continue to run. To help avoid experiment time out failures, I used the minimum of 15 minutes.
+
+_task='classification'_
+
+This defines the experiment type which in this case is classification.
+
+_primary_metric='accuracy'_
+
+## Pipeline comparison
+**Comparison of the two models and their performance. Differences in accuracy & architecture - comments**
+
+
+| HyperDrive Model | |
+| :---: | :---: |
+| id | HD_fda34223-a94c-456b-8bf7-52e84aa1d17e_14  |
+| Accuracy | 0.9146024279210926 |
+
+
+| AutoML Model | |
+| :---: | :---: |
+| id | AutoML_ee4a685e-34f2-4031-a4f9-fe96ff33836c_13 |
+| Accuracy | 0.918176024279211 |
+| AUC_weighted | 0.9189939634729121 |
+| Algortithm | VotingEnsemble |
+
+The two models performed very similarly in terms of accuracy, with the hyperdive model achieving 91.4% accuracy and the autoML model achieving 91.8% accuracy. The difference in accuracy could come down to slight variations in the cross-validation process. The pipelines make use of the same data cleansing process, however autoML tests a number of scalers in combination with models, adding a preprocessing step prior to model training. Architecturally, the models are quite different. Logistic regression (91.4% accurate; tuned with hyperdrive) effectively makes use of a fitted logistic function with a threshold to carry out binary classification. The voting ensemble classifier (91.8% accurate; selected via autoML) makes use of a number of individual classifiers and, in this case, averages the class probabilities of each classifier to make a prediction. 
+
+
 The autoML pipeline is very similar to the Scikit-learn pipeline described above with several notable differences:
 - The data are retrieved from the provided URL.
 - The data are cleaned using the same process as described above. 
@@ -43,8 +90,7 @@ The autoML pipeline is very similar to the Scikit-learn pipeline described above
 
 The best model selected by autoML was a voting ensemble (~91.8% accurate). The Voting Ensemble model selected used a slight amount of l1 regularization, meaning that some penalty was placed the number of non-zero model coefficients. Additionally, the voting method was soft voting (as compared to hard), where all models' class probabilities are averaged and the highest probablility selected to make a prediction. Although the learning rate scheduling for gradient descent is specified as 'invscaling' (i.e. inverse scaling), the scaling factor power is 0 indicating that the learning rate is constant in this case.
 
-## Pipeline comparison
-The two models performed very similarly in terms of accuracy, with the hyperdive model achieving 91.4% accuracy and the autoML model achieving 91.8% accuracy. The difference in accuracy could come down to slight variations in the cross-validation process. The pipelines make use of the same data cleansing process, however autoML tests a number of scalers in combination with models, adding a preprocessing step prior to model training. Architecturally, the models are quite different. Logistic regression (91.4% accurate; tuned with hyperdrive) effectively makes use of a fitted logistic function with a threshold to carry out binary classification. The voting ensemble classifier (91.8% accurate; selected via autoML) makes use of a number of individual classifiers and, in this case, averages the class probabilities of each classifier to make a prediction. 
+The difference in accuracy between the two models is rather trivial and  I am of the opinion that the AutoML model is actually better because of its **AUC_weighted** metric which equals to **0.9189939634729121** and is more fit for the highly imbalanced data that we have here. If we were given more time to run the AutoML, the resulting model would certainly be much more better. And the best thing is that AutoML would make all the necessary calculations, trainings, validations, etc. without the need for us to do anything. This is the difference with the Scikit-learn Logistic Regression pipeline, in which we have to make any adjustments, changes, etc. by ourselves and come to a final model after many trials & errors. 
 
 ## Future work
 In the future it might be helpful to explore more feature engineering steps prior to training. Also, many of the AutoML runs use a scaler prior to model training and evaluation. The encoded data does not really benefit from this scaling, so selectively scaling continuous variables instead of all, might be helpful. Also, running AutoML for much longer would likely find better models in this case. Furthermore, exploring hyperdrive with a broader variety of classification models would also be informative.
