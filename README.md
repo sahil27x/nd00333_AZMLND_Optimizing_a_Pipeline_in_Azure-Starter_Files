@@ -58,21 +58,27 @@ _task = 'classification'_
 This defines the experiment type which in this case is classification.
 
 _primary_metric = 'accuracy'_
+
 The metric that Automated Machine Learning will optimize for model selection. we have used accuracy as the primary metrics.
 
-_training_data = ds_ 
+_training_data = ds_
+
 The training data to be used within the experiment. It should contain both training features and a label column.
 
 _label_column_name = 'y'_
+
 The name of the label column.
 
 _n_cross_validations = 7_
+
 How many cross validations to perform when user validation data is not specified.
 
 _compute_target = compute_cluster_
+
 The Azure Machine Learning compute target to run the Automated Machine Learning experiment on.
 
 _iterations = 5_
+
 The total number of different algorithm and parameter combinations to test during an automated ML experiment.
 
 
